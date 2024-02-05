@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "MamangRust/echobloggrpc/internal/pb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message Post {
+    int32 id = 1;
+    string title = 2;
+    string slug = 3;
+    string img = 4;
+    string body = 5;
+    int32 category_id = 6;
+    int32 user_id = 7;
+    string user_name = 8;
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
+}
+
+message CreatePostRequest {
+    string title = 1;
+    string slug = 2;
+    string img = 3;
+    string body = 4;
+    int32 category_id = 5;
+    int32 user_id = 6;
+    string user_name = 7;
+}
+
+message DeletePostRequest {
+    int32 id = 1;
+}
+
+message GetPostRequest {
+    int32 id = 1;
+}
+
+message GetPostRelationRequest {
+    int32 id = 1;
+}
+
+message GetPostRelationResponse {
+    int32 post_id = 1;
+    string title = 2;
+    int32 comment_id = 3;
+    int32 id_post_comment = 4;
+    string user_name_comment = 5;
+    string comment = 6;
+}
+
+message GetPostsResponse {
+    repeated Post posts = 1;
+}
+
+message PostsRequest {}
+
+message UpdatePostRequest {
+    int32 id = 1;
+    string title = 2;
+    string slug = 3;
+    string img = 4;
+    string body = 5;
+    int32 category_id = 6;
+    int32 user_id = 7;
+    string user_name = 8;
+}
+
+message DeletePostResponse {
+    bool success = 1;
+}
+
+service PostService {
+    rpc CreatePost(CreatePostRequest) returns (Post) {}
+    rpc DeletePost(DeletePostRequest) returns (DeletePostResponse) {}
+    rpc GetPost(GetPostRequest) returns (Post) {}
+    rpc GetPostRelation(GetPostRelationRequest) returns (GetPostRelationResponse) {}
+    rpc GetPosts(google.protobuf.Empty) returns (GetPostsResponse) {}
+    rpc UpdatePost(UpdatePostRequest) returns (Post) {}
+}

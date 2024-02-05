@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "MamangRust/echobloggrpc/internal/pb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+
+message Category {
+    int32 id = 1;
+    string name = 2;
+    google.protobuf.Timestamp created_at = 3;
+    google.protobuf.Timestamp updated_at = 4;
+}
+
+message CategoriesRequest {}
+
+message CategoryResponse {
+    Category category = 1;
+}
+
+message CategoriesResponse {
+    repeated Category categories = 1;
+}
+
+message CreateCategoryRequest {
+    string name = 1;
+}
+
+message UpdateCategoryRequest {
+    int32 id = 1;
+    string name = 2;
+}
+
+message CategoryRequest {
+    int32 id = 1;
+}
+
+message DeleteCategoryResponse {
+    bool success = 1;
+}
+
+service CategoryService {
+    rpc CreateCategory(CreateCategoryRequest) returns (CategoryResponse) {}
+    rpc GetCategories(google.protobuf.Empty) returns (CategoriesResponse) {}
+    rpc GetCategory(CategoryRequest) returns (CategoryResponse) {}
+    rpc UpdateCategory(UpdateCategoryRequest) returns (CategoryResponse) {}
+    rpc DeleteCategory(CategoryRequest) returns (DeleteCategoryResponse) {}
+}
