@@ -4,24 +4,32 @@ import (
 	"MamangRust/echobloggrpc/internal/domain/requests"
 	"MamangRust/echobloggrpc/internal/domain/response"
 	"MamangRust/echobloggrpc/internal/pb"
+	"MamangRust/echobloggrpc/pkg/auth"
+	"errors"
+	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type categoryHandle struct {
 	client pb.CategoryServiceClient
+	token  auth.TokenManager
 }
 
-func NewHandlerCategory(client pb.CategoryServiceClient, router *echo.Echo) *categoryHandle {
+func NewHandlerCategory(client pb.CategoryServiceClient, router *echo.Echo, token auth.TokenManager) *categoryHandle {
 	categoryHandler := &categoryHandle{
 		client: client,
+		token:  token,
 	}
 
 	routerCategory := router.Group("/api/category")
 
 	routerCategory.GET("/hello", categoryHandler.handleHello)
+	routerCategory.GET("/test-token", categoryHandler.handleTestToken)
 	routerCategory.GET("/", categoryHandler.handleGetCategories)
 	routerCategory.GET("/:id", categoryHandler.handleGetCategory)
 	routerCategory.POST("/create", categoryHandler.handleCreateCategory)
@@ -32,7 +40,32 @@ func NewHandlerCategory(client pb.CategoryServiceClient, router *echo.Echo) *cat
 }
 
 func (h *categoryHandle) handleHello(c echo.Context) error {
-	return c.String(200, "Hello")
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return echo.ErrUnauthorized
+	}
+
+	tokenString := strings.Split(authHeader, " ")[1]
+
+	claims, err := h.token.ValidateToken(tokenString)
+	if err != nil {
+		return err
+	}
+
+	name := claims.Name
+	return c.String(http.StatusOK, "Welcome "+name+"!")
+}
+
+func (h *categoryHandle) handleTestToken(c echo.Context) error {
+	token, ok := c.Get("user").(*jwt.Token)
+	if !ok {
+		return errors.New("JWT token missing or invalid")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims) // by default claims is of type `jwt.MapClaims`
+	if !ok {
+		return errors.New("failed to cast claims as jwt.MapClaims")
+	}
+	return c.JSON(http.StatusOK, claims)
 }
 
 func (h *categoryHandle) handleGetCategories(c echo.Context) error {

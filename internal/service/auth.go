@@ -63,7 +63,7 @@ func (s *authService) Login(request *requests.AuthLoginRequest) (*requests.JWTTo
 		return nil, errors.New("failed compare password " + err.Error())
 	}
 
-	token, err := s.createJwt(int32(res.ID))
+	token, err := s.createJwt(res.Firstname+" "+res.Lastname, res.ID)
 
 	if err != nil {
 		return nil, err
@@ -74,8 +74,8 @@ func (s *authService) Login(request *requests.AuthLoginRequest) (*requests.JWTTo
 	}, nil
 }
 
-func (s *authService) createJwt(id int32) (string, error) {
-	token, err := s.token.NewJwtToken(int(id))
+func (s *authService) createJwt(fullname string, id int32) (string, error) {
+	token, err := s.token.GenerateToken(fullname, id)
 
 	if err != nil {
 		return "", err

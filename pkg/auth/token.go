@@ -2,57 +2,63 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
 )
 
+type jwtCustomClaims struct {
+	Name  string `json:"name"`
+	Admin bool   `json:"admin"`
+	jwt.RegisteredClaims
+}
+
 type TokenManager interface {
-	NewJwtToken(userId int) (string, error)
-	ValidateToken(token string) (string, error)
+	GenerateToken(fullname string, id int32) (string, error)
+	ValidateToken(tokenString string) (*jwtCustomClaims, error)
 }
 
 type Manager struct {
-	secretKey string
+	secretKey []byte
 }
 
 func NewManager(secretKey string) (*Manager, error) {
 	if secretKey == "" {
 		return nil, errors.New("empty secret key")
 	}
-	return &Manager{secretKey: secretKey}, nil
+	return &Manager{secretKey: []byte(secretKey)}, nil
 }
 
-func (m *Manager) NewJwtToken(userId int) (string, error) {
-	nowTime := time.Now()
-	expireTime := nowTime.Add(12 * time.Hour)
+func (m *Manager) GenerateToken(fullname string, id int32) (string, error) {
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(expireTime),
-		Subject:   strconv.Itoa(userId),
-	})
+	claims := &jwtCustomClaims{
+		fullname,
+		true,
+		jwt.RegisteredClaims{
+			Subject:   strconv.Itoa(int(id)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+		},
+	}
 
-	return token.SignedString([]byte(m.secretKey))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(m.secretKey)
 }
 
-func (m *Manager) ValidateToken(accessToken string) (string, error) {
-	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (i interface{}, err error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-
-		return []byte(m.secretKey), nil
+func (m *Manager) ValidateToken(tokenString string) (*jwtCustomClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwtCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return m.secretKey, nil
 	})
+
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", fmt.Errorf("error get user claims from token")
+	claims, ok := token.Claims.(*jwtCustomClaims)
+	if !ok || !token.Valid {
+		return nil, echo.ErrUnauthorized
 	}
 
-	return claims["sub"].(string), nil
+	return claims, nil
 }

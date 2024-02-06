@@ -1,11 +1,9 @@
 package middleware
 
 import (
-	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 var whiteListPaths = []string{
@@ -15,12 +13,7 @@ var whiteListPaths = []string{
 
 func WebSecurityConfig(e *echo.Echo) {
 	config := echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return jwt.MapClaims{
-				"expires_at": jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
-			}
-		},
-		SigningKey: []byte("secret"),
+		SigningKey: []byte(viper.GetString("SECRET_KEY")),
 		Skipper:    skipAuth,
 	}
 	e.Use(echojwt.WithConfig(config))

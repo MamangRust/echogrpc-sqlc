@@ -2,6 +2,9 @@ package app
 
 import (
 	"MamangRust/echobloggrpc/internal/handler/api"
+	middlewares "MamangRust/echobloggrpc/internal/middleware"
+	"MamangRust/echobloggrpc/pkg/auth"
+	"MamangRust/echobloggrpc/pkg/dotenv"
 	"MamangRust/echobloggrpc/pkg/logger"
 	"context"
 	"flag"
@@ -11,6 +14,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -35,15 +39,25 @@ func RunClient() {
 		logger.Fatal("Failed to connect to server", zap.Error(err))
 	}
 
+	err = dotenv.Viper()
+
+	if err != nil {
+		logger.Fatal("Failed to load .env file", zap.Error(err))
+	}
+
 	e := echo.New()
 
 	// Middleware for graceful shutdown
 	e.Use(middleware.Recover())
 	e.Use(middleware.Logger())
+	middlewares.WebSecurityConfig(e)
+	token, err := auth.NewManager(viper.GetString("SECRET_KEY"))
 
-	handler := api.NewHandler(conn)
+	if err != nil {
+		logger.Fatal("Failed to create token manager", zap.Error(err))
+	}
 
-	handler.Init(e)
+	api.NewHandler(conn, token, e)
 
 	go func() {
 		if err := e.Start(":5000"); err != nil {
